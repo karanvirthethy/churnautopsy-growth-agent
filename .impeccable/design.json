@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-10T16:58:46.704663+00:00",
+  "title": "Design System: ChurnAutopsy Growth Workspace",
+  "extensions": {
+    "sourceFiles": ["DESIGN.md", "src/styles.css", "src/App.tsx"],
+    "authority": {
+      "mode": "Operate",
+      "direction": "Pinned responsive charcoal dashboard, self-hosted Manrope, green accent",
+      "implementation": "code-led",
+      "approvedComp": false,
+      "launcher": "unavailable",
+      "detector": "unavailable"
+    },
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Action green"
+      },
+      "workspace": {
+        "role": "neutral",
+        "displayName": "Charcoal workspace"
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Raised charcoal"
+      },
+      "caution": {
+        "role": "status",
+        "displayName": "Caution amber"
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "purpose": "Page heading; 28px at widths up to 800px"
+      },
+      "body": {
+        "purpose": "Shared family and root size; table 12px, support 11\u201313px"
+      },
+      "numeric": {
+        "fontVariantNumeric": "tabular-nums",
+        "countFontSize": "42px",
+        "mobileCountFontSize": "34px"
+      }
+    },
+    "motion": [
+      {
+        "name": "control-transition",
+        "value": "background 0.16s ease, color 0.16s ease",
+        "purpose": "Buttons and links"
+      }
+    ],
+    "reducedMotion": {
+      "query": "(prefers-reduced-motion: reduce)",
+      "transition": "none !important",
+      "scrollBehavior": "auto !important"
+    },
+    "breakpoints": [
+      {
+        "name": "compact-desktop",
+        "value": "1200px",
+        "query": "(max-width: 1200px)"
+      },
+      {
+        "name": "mobile",
+        "value": "800px",
+        "query": "(max-width: 800px)"
+      },
+      {
+        "name": "wide",
+        "value": "1600px",
+        "query": "(min-width: 1600px)"
+      }
+    ],
+    "layout": {
+      "sidebarWidth": "232px",
+      "compactSidebarWidth": "205px",
+      "mainMaxWidth": "1500px",
+      "desktopMainPadding": "44px 40px 24px",
+      "mobileMainPadding": "28px 20px 20px",
+      "mobileTableMinWidth": "700px",
+      "mobileActionMinSize": "36px"
+    },
+    "states": {
+      "focus": {
+        "outline": "2px solid #b8e899",
+        "outlineOffset": "4px",
+        "searchAndTableOffset": "3px"
+      },
+      "disabled": {
+        "opacity": 0.45,
+        "cursor": "wait"
+      },
+      "error": {
+        "role": "alert",
+        "recovery": "Retry loading"
+      },
+      "completion": {
+        "role": "status"
+      },
+      "mobileOverflow": "Contained horizontal table and navigation scrolling with visible hints",
+      "review": "Saved/rejected status with return-to-review action"
+    },
+    "elevation": {
+      "strategy": "Tonal surfaces and 1px borders; no shadows"
+    }
+  },
+  "components": [
+    {
+      "name": "Primary action",
+      "kind": "button",
+      "html": "<button class=\"ds-primary\">Find leads</button>",
+      "css": ".ds-primary{font-family:var(--font-sans,\"Manrope Variable\",sans-serif);background:var(--color-accent,#b8e899);color:#1c2b17;border:0;border-radius:6px;padding:12px 17px;font-size:12px;font-weight:750;cursor:pointer;transition:background .16s ease,color .16s ease}.ds-primary:hover{background:#c9f4ac}.ds-primary:focus-visible{outline:2px solid #b8e899;outline-offset:4px;}.ds-primary:disabled{opacity:.45;cursor:wait}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}}",
+      "refersTo": "button-primary"
+    },
+    {
+      "name": "Review action",
+      "kind": "button",
+      "html": "<button class=\"ds-review\">Save</button>",
+      "css": ".ds-review{font-family:var(--font-sans,\"Manrope Variable\",sans-serif);border:1px solid #465548;background:#222d25;color:#d6e3d8;padding:6px 9px;border-radius:5px;font-size:10px;cursor:pointer;transition:background .16s ease,color .16s ease}.ds-review:hover{background:#364838}.ds-review:focus-visible{outline:2px solid #b8e899;outline-offset:4px;}.ds-review:disabled{opacity:.45;cursor:wait}@media(max-width:800px){.ds-review{min-height:36px;min-width:36px}}@media(prefers-reduced-motion:reduce){.ds-review{transition:none}}"
+    },
+    {
+      "name": "Search",
+      "kind": "input",
+      "html": "<label class=\"ds-search\"><input aria-label=\"Search companies\" placeholder=\"Search companies\u2026\"></label>",
+      "css": ".ds-search{display:flex;border:1px solid #364239;padding:8px 10px;border-radius:5px;color:#8f9f93}.ds-search input{font-family:var(--font-sans,\"Manrope Variable\",sans-serif);background:transparent;color:#e8ede8;border:0;outline:none;font-size:11px;width:150px;caret-color:#b8e899}.ds-search input::placeholder{color:#a5b2a9}.ds-search:focus-within{outline:2px solid #b8e899;outline-offset:3px}"
+    },
+    {
+      "name": "Navigation",
+      "kind": "nav",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Workspace\"><a href=\"#dashboard\" aria-current=\"page\">Dashboard</a><a href=\"#leads\">Leads</a></nav>",
+      "css": ".ds-nav{font-family:var(--font-sans,\"Manrope Variable\",sans-serif);display:grid;gap:8px;background:#151b17}.ds-nav a{display:flex;padding:12px;border-radius:7px;color:#a9b4ac;font-size:13px;text-decoration:none;transition:background .16s ease,color .16s ease}.ds-nav a:hover{background:#202a22}.ds-nav a[aria-current]{background:#29372b;color:#d1efb8}.ds-nav a:focus-visible{outline:2px solid #b8e899;outline-offset:4px;}@media(max-width:800px){.ds-nav{display:flex;overflow:auto}.ds-nav a{padding:9px;font-size:11px;white-space:nowrap}}@media(prefers-reduced-motion:reduce){.ds-nav a{transition:none}}"
+    },
+    {
+      "name": "Target chip",
+      "kind": "chip",
+      "html": "<span class=\"ds-chip\">B2B SaaS</span>",
+      "css": ".ds-chip{font-family:var(--font-sans,\"Manrope Variable\",sans-serif);display:inline-block;border:1px solid #3c493f;padding:7px 10px;border-radius:5px;font-size:11px;color:#c1cec4}"
+    },
+    {
+      "name": "Target panel",
+      "kind": "card",
+      "html": "<section class=\"ds-panel\"><h2>Your ideal customer</h2><p>Focused discovery. Better conversations.</p></section>",
+      "css": ".ds-panel{font-family:var(--font-sans,\"Manrope Variable\",sans-serif);background:#1a211c;color:#e8ede8;border:1px solid #303b32;padding:21px 22px;border-radius:10px}.ds-panel h2{font-size:16px;font-weight:600;letter-spacing:-.3px;margin:0}.ds-panel p{font-size:11px;color:#a5b2a9;line-height:1.7;margin:5px 0 0}",
+      "refersTo": "panel"
+    }
+  ],
+  "narrative": {
+    "overview": "Operate mode: compact, calm, evidence-led review. The pinned direction is a responsive charcoal dashboard with a green action accent and self-hosted Manrope. Preserve the existing visual system and deliberate human decisions.",
+    "dos": [
+      "Do preserve contained table scrolling and visible mobile scroll hints.",
+      "Do expose keyboard focus, accessible labels, and reduced-motion behavior.",
+      "Do keep uncertainty, missing data, and reversible review decisions visible."
+    ],
+    "donts": [
+      "Don't add decorative charts, gradients, remote company logos, or unverified business claims.",
+      "Don't imply future outreach capabilities are available."
+    ]
+  }
+}
