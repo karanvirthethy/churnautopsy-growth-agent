@@ -43,6 +43,15 @@ test("owner can review demo leads and navigate all five pages", async ({
   await expect(
     page.getByRole("heading", { name: "Connections" }),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Check connections", exact: true })
+    .click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Supabase" }),
+  ).toContainText("Demo mode: no database request made.");
+  await expect(
+    page.getByRole("status").filter({ hasText: "Supabase" }),
+  ).toContainText("Demo mode: no Hunter request made.");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -88,4 +97,42 @@ test("minimal Discover companies show unverified attributes and remain reviewabl
     .getByRole("button", { name: "Save Metric Grove", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText("Metric Grove saved");
+});
+
+test("connection checks show independent service failures and recover on retry", async ({
+  page,
+}) => {
+  let checks = 0;
+  await page.route("**/api/connections/health", (route) => {
+    expect(route.request().method()).toBe("POST");
+    checks++;
+    return route.fulfill({
+      json: {
+        supabase: {
+          status: "healthy",
+          message:
+            "Database reachable; expected company columns accessible. No data changed.",
+        },
+        hunter:
+          checks === 1
+            ? {
+                status: "error",
+                message:
+                  "Check the Hunter secret binding, account access, network access, and request limits.",
+              }
+            : { status: "healthy", message: "Hunter account reachable." },
+      },
+    });
+  });
+  await page.goto("/#settings");
+  const check = page.getByRole("button", {
+    name: "Check connections",
+    exact: true,
+  });
+  await check.click();
+  const status = page.getByRole("status").filter({ hasText: "Supabase" });
+  await expect(status).toContainText("Supabase — healthy");
+  await expect(status).toContainText("Hunter — error");
+  await check.click();
+  await expect(status).toContainText("Hunter — healthy");
 });

@@ -101,3 +101,46 @@ it("upgrades legacy Hunter metadata to unknown without changing decisions or dem
     await db.close();
   }
 }, 15000);
+
+it("existing migrations allow the secret-key service_role to store unknowns and preserve decisions on conflict", async () => {
+  const db = new PGlite();
+  try {
+    await db.exec(
+      "create role anon; create role authenticated; create role service_role bypassrls;",
+    );
+    for (const file of [
+      "202611100001_companies.sql",
+      "202611100002_unverified_discovery.sql",
+    ])
+      await db.exec(await readFile(`supabase/migrations/${file}`, "utf8"));
+    await db.exec("set role service_role");
+    await db.exec(
+      "insert into companies (domain,name,source) values ('secret-key.example','Synthetic','hunter')",
+    );
+    await db.exec(
+      "update companies set status='saved' where domain='secret-key.example'",
+    );
+    await db.exec(
+      "insert into companies (domain,name,source) values ('secret-key.example','Synthetic','hunter') on conflict (domain) do nothing",
+    );
+    const { rows } = await db.query(
+      "select industry,headcount,location,score,status,eligibility from companies",
+    );
+    expect(rows).toEqual([
+      {
+        industry: null,
+        headcount: null,
+        location: null,
+        score: null,
+        status: "saved",
+        eligibility: "not_assessed",
+      },
+    ]);
+    await db.exec("reset role; set role anon");
+    await expect(db.query("select * from companies")).rejects.toThrow(
+      /permission denied/,
+    );
+  } finally {
+    await db.close();
+  }
+}, 15000);

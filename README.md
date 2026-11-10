@@ -37,13 +37,13 @@ For a preinstalled Chromium, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/c
 
 ## Enable live mode
 
-Use a **new, dedicated Supabase project**. Do not apply these migrations or reuse credentials from the existing ChurnAutopsy production project.
+Use the existing **dedicated ChurnAutopsy Growth Agent Supabase project**. See the [Phase 2A configuration and live testing guide](docs/live-setup.md) for exact Codex variables and restricted network secret destinations. Do not apply these migrations or reuse credentials from the existing ChurnAutopsy production project.
 
-1. Create a dedicated project and apply both SQL files in `supabase/migrations/` in filename order through its SQL editor, or use the Supabase CLI against that project's verified project reference. No command in this repository automatically links or migrates a remote project.
+1. The owner reports both migrations already applied to the Growth Agent project. Do not rerun them. New installations need both SQL files in `supabase/migrations/` in filename order. No command automatically links or migrates a remote project.
 2. In Supabase Auth, disable public signups. Create the single owner account with a strong password and record its user UUID. The app does not offer account registration.
-3. Set the server's `DATA_MODE=live`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OWNER_USER_ID`, and `HUNTER_API_KEY`. Store values in an ignored local `.env` or your host's secret manager. Never use a `VITE_` prefix for secrets.
+3. Set the server's `DATA_MODE=live`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `OWNER_USER_ID`, and `HUNTER_API_KEY`. Store values in an ignored local `.env` or your host's secret manager. Never use a `VITE_` prefix for secrets.
 4. Restart the server and sign in with that owner account. Live mode refuses to start with missing configuration; provider failures never silently fall back to fictional data.
-5. Click **Find leads**. Check current Hunter plan availability and usage terms first. Phase 1 requests the first 20 matches, at most three discovery requests per minute. Repeating a search does not advance to another page.
+5. Open **Settings → Check connections** for owner-only, read-only Supabase and Hunter status. Then click **Find leads**. Check current Hunter plan availability and usage terms first. Phase 1 requests the first 20 matches, at most three discovery requests per minute. Repeating a search does not advance to another page.
 
 Required outbound HTTPS destinations: `api.hunter.io` and your dedicated `<project-ref>.supabase.co`. `hunter.io` is useful for reading provider documentation. GitHub API access is separately needed for PR creation.
 
@@ -76,7 +76,7 @@ React / Vite → same-origin /api → owner authentication → Hunter Discover
 - `shared/`: public data contracts only.
 - `supabase/migrations/`: database constraints, uniqueness, timestamps, and row-level security.
 
-Canonical domains are unique. Discovery uses conflict-ignore inserts, so rediscovery cannot reset saved/rejected decisions. RLS is enabled with no browser access policies, and grants to anonymous/authenticated roles are revoked. Only the server's service-role client can read/write companies. The API authenticates the owner before any live read, write, or Hunter call. Provider error payloads and request URLs are not logged or returned to the browser.
+Canonical domains are unique. Discovery uses conflict-ignore inserts, so rediscovery cannot reset saved/rejected decisions. RLS is enabled with no browser access policies, and grants to anonymous/authenticated roles are revoked. Only the server's secret-key service-role client can read/write companies. The API authenticates the owner before any live read, write, or Hunter call. Provider error payloads and request URLs are not logged or returned to the browser.
 
 ## Future phases
 

@@ -1,9 +1,50 @@
+import { useState } from "react";
+import { request } from "../api";
+import type { ConnectionHealth } from "../../shared/health";
 import type { Workspace } from "../../shared/company";
 export function SettingsPage({ workspace }: { workspace?: Workspace }) {
+  const [health, setHealth] = useState<ConnectionHealth>();
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState("");
+  async function check() {
+    setChecking(true);
+    setError("");
+    setHealth(undefined);
+    try {
+      setHealth(
+        await request<ConnectionHealth>("/connections/health", "POST", {}),
+      );
+    } catch {
+      setError(
+        "Unable to check connections. Sign in again if your session expired, or retry in one minute.",
+      );
+    } finally {
+      setChecking(false);
+    }
+  }
   return (
     <div className="settings-layout">
       <section className="settings-panel">
         <h2>Connections</h2>
+        <p>Run read-only checks. No companies are discovered or enriched.</p>
+        <button
+          className="primary"
+          disabled={checking || !workspace}
+          onClick={check}
+        >
+          {checking ? "Checking…" : "Check connections"}
+        </button>
+        {error && <p role="alert">{error}</p>}
+        {health && (
+          <div role="status">
+            <p>
+              Supabase — {health.supabase.status}: {health.supabase.message}
+            </p>
+            <p>
+              Hunter — {health.hunter.status}: {health.hunter.message}
+            </p>
+          </div>
+        )}
         <div className="setting-row">
           <div>
             <h3>Data mode</h3>
@@ -63,10 +104,10 @@ export function SettingsPage({ workspace }: { workspace?: Workspace }) {
       <section className="settings-panel setup-note">
         <h2>Connect live data securely</h2>
         <p>
-          Follow the README to create a dedicated Supabase project, apply the
-          migration, and configure server environment variables. Never use your
-          existing production project. The application fails closed if live
-          configuration is incomplete.
+          Follow the live setup guide to configure the dedicated Growth Agent
+          project and server environment variables. Do not rerun migrations
+          already applied or use your original production project. The
+          application fails closed if live configuration is incomplete.
         </p>
       </section>
     </div>
