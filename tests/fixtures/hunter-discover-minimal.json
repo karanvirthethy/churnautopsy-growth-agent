@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "domain": "metricgrove.example",
+      "organization": "Metric Grove",
+      "emails_count": { "personal": 23, "generic": 5, "total": 28 }
+    }
+  ],
+  "meta": {
+    "results": 1,
+    "limit": 20,
+    "offset": 0,
+    "params": { "headquarters_location": { "include": [{ "country": "US" }] } },
+    "filters": { "headquarters_location": { "include": [{ "country": "US" }] } }
+  }
+}
