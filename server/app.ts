@@ -1,3 +1,5 @@
+import type { ConnectionHealth } from "../shared/health.js";
+import { demoHealth } from "./health.js";
 import express from "express";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
@@ -11,6 +13,7 @@ interface Options {
   authenticate?: (token: string) => Promise<boolean>;
   login?: (email: string, password: string) => Promise<string | null>;
   secureCookies?: boolean;
+  health?: () => Promise<ConnectionHealth>;
 }
 export function createApp(options: Options) {
   const app = express();
@@ -86,6 +89,27 @@ export function createApp(options: Options) {
     }
     next();
   });
+  app.post(
+    "/api/connections/health",
+    rateLimit({
+      windowMs: 60_000,
+      limit: 3,
+      message: {
+        error: "Connection check limit reached. Try again in one minute.",
+      },
+    }),
+    async (_req, res) => {
+      if (options.mode === "demo") {
+        res.json(demoHealth);
+        return;
+      }
+      if (!options.health) {
+        res.status(503).json({ error: "Connection checks unavailable" });
+        return;
+      }
+      res.json(await options.health());
+    },
+  );
   app.get("/api/companies", async (_req, res) =>
     res.json({ mode: options.mode, companies: await options.store.list() }),
   );

@@ -5,6 +5,7 @@ export async function discoverHunter(apiKey: string) {
     `https://api.hunter.io/v2/discover?api_key=${encodeURIComponent(apiKey)}`,
     {
       method: "POST",
+      redirect: "error",
       headers: { "Content-Type": "application/json" },
       signal: AbortSignal.timeout(15000),
       body: JSON.stringify({

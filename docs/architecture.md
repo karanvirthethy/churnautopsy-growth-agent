@@ -4,7 +4,7 @@
 
 The browser communicates only with the same-origin Node API. In live mode, each request validates the Supabase access token and exact owner UUID. The token is held in an HttpOnly cookie; the frontend cannot read it. Login has a separate throttle. Mutations require JSON and reject foreign Origin headers. The application does not trust proxy-supplied IP headers; the reverse proxy's shared address may impose stricter throttling, which is safe for one owner.
 
-The Supabase service-role key bypasses RLS and must remain exclusively on the server. Sign-in uses a separate client so the persistence client's service-role authorization cannot be overwritten by a user session. Database permissions deny browser roles entirely. Error responses intentionally omit upstream detail, because Hunter URLs include credentials and responses may contain prospect data.
+The current Supabase `sb_secret_` key (`SUPABASE_SECRET_KEY`) maps to service_role and bypasses RLS and must remain exclusively on the server. Sign-in uses a separate client so the persistence client's service-role authorization cannot be overwritten by a user session. Database permissions deny browser roles entirely. Error responses intentionally omit upstream detail, because Hunter URLs include credentials and responses may contain prospect data.
 
 Demo and live storage are distinct. The live store never seeds demo rows. `DATA_MODE=live` with incomplete configuration exits instead of serving a misleading fallback.
 
@@ -23,3 +23,7 @@ The current company model stores only business-level information. It has no emai
 5. **Replies:** signed, replay-protected webhooks; deduplicated provider message IDs; thread/company association; and cancellation of pending follow-ups before classification. Treat incoming message content as untrusted data.
 
 Add these through new migrations and service interfaces. Do not repurpose fit scores as legal assessments or infer consent from a company appearing in Hunter.
+
+## Phase 2A connection checks
+
+See [live setup](live-setup.md). Owner-only checks probe database columns with HEAD and Hunter account availability. They return fixed diagnostic messages and no provider payloads. Elevated keys are sent only as apikey headers to the configured Supabase origin; actual user JWTs stay in Authorization headers for identity verification. Requests have timeouts and reject redirects. No automatic remote migration or enrichment runs.
