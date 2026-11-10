@@ -8,7 +8,7 @@ A private research workspace for finding and reviewing potential ChurnAutopsy cu
 
 - Responsive dark dashboard, searchable Leads workspace, Settings, and clearly scoped Campaigns and Inbox pages.
 - Find Leads, Save Lead, Reject Lead, and return-to-review actions.
-- Explained, deterministic lead-fit scoring. This phase does not call an LLM or claim AI-verified qualification.
+- Explicitly unscored live leads when qualification evidence is unavailable. This phase does not call an LLM or claim AI-verified qualification.
 - Server-side Hunter integration, Supabase PostgreSQL storage, canonical-domain deduplication, and owner-only authentication.
 - Explicit demo mode with fictional `.example` domains; no real prospect fixtures.
 - Unit, API, PostgreSQL migration, and desktop/mobile browser tests; GitHub Actions CI.
@@ -39,7 +39,7 @@ For a preinstalled Chromium, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/c
 
 Use a **new, dedicated Supabase project**. Do not apply these migrations or reuse credentials from the existing ChurnAutopsy production project.
 
-1. Create a dedicated project and apply `supabase/migrations/202611100001_companies.sql` through its SQL editor, or use the Supabase CLI against that project's verified project reference. No command in this repository automatically links or migrates a remote project.
+1. Create a dedicated project and apply both SQL files in `supabase/migrations/` in filename order through its SQL editor, or use the Supabase CLI against that project's verified project reference. No command in this repository automatically links or migrates a remote project.
 2. In Supabase Auth, disable public signups. Create the single owner account with a strong password and record its user UUID. The app does not offer account registration.
 3. Set the server's `DATA_MODE=live`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OWNER_USER_ID`, and `HUNTER_API_KEY`. Store values in an ignored local `.env` or your host's secret manager. Never use a `VITE_` prefix for secrets.
 4. Restart the server and sign in with that owner account. Live mode refuses to start with missing configuration; provider failures never silently fall back to fictional data.
@@ -51,18 +51,15 @@ For deployment, build the frontend and run `NODE_ENV=production npm start` behin
 
 ## Discovery and scoring
 
-The server calls `POST https://api.hunter.io/v2/discover` with a fixed US headquarters filter, `1-10` and `11-50` headcount buckets, SaaS/B2B keywords, and a limit of 20. It validates the response, canonicalizes domains, and excludes results without matching geography, size, or software evidence. Hunter access depends on your plan. See the [Hunter API reference](https://hunter.io/api-documentation/v2).
+The server calls `POST https://api.hunter.io/v2/discover` with US headquarters, `1-10` and `11-50` headcount buckets, the documented `Software Development` industry, and a limit of 20. No keyword filter is imposed: requiring both literal `SaaS` and `B2B` keywords can hide relevant companies. This broader search includes companies that are not B2B SaaS; manual qualification is required.
 
-Hunter's `1-10` bucket includes solo businesses. Those rows explicitly say **Verify 2+ employees**; they are research candidates, not confirmed 2–50 employee matches. Missing or out-of-range headcounts are excluded. B2B and SaaS keyword matches remain evidence for human review, not proof of a business model.
+Verified against [Hunter's official Discover documentation](https://hunter.io/api-documentation/v2#discover) and [industry list](https://hunter.io/files/industries.json) on November 10, 2026. The documented response contains `data` entries with `domain`, `organization`, and `emails_count` (`personal`, `generic`, `total`), plus pagination/filter metadata. It does **not** supply company location, industry, employee count, or keyword evidence. Email counts are explicitly not employee counts. See [contract notes](docs/hunter-discover.md).
 
-| Signal                                               | Points |
-| ---------------------------------------------------- | -----: |
-| US headquarters plus software industry/keyword match |     60 |
-| Employee range entirely within 2–50                  |     20 |
-| SaaS keyword evidence                                |     10 |
-| B2B keyword evidence                                 |     10 |
+Results are retained with unknown attributes stored as SQL `NULL` and shown as **Unverified**. Their fit score is `NULL`, displayed as **Unscored**, rather than a misleading zero or filter-derived score. Request filters and `meta.filters` describe the search, not verified attributes of individual companies. Extra undocumented fields are ignored. No enrichment endpoint is called. Any future paid enrichment requires explicit owner approval.
 
-Expand a lead's score to inspect the evidence. Every lead remains `eligibility=not_assessed`, including saved leads. Demo scores and explanations are illustrative.
+The `1-10` search bucket includes solo businesses, so confirm 2–50 employees manually. Also verify location, software industry, and B2B/SaaS business models before qualifying a result. Saved companies remain `eligibility=not_assessed`; saving is a shortlist decision only. Numeric demo scores remain explicitly illustrative.
+
+For existing Phase 1 installations, apply the new `202611100002_unverified_discovery.sql` migration to the dedicated Growth Agent database. It permits unknown attributes and clears unsupported legacy Hunter metadata/scores while preserving identities, saved/rejected decisions, and demo data. Fresh installations must apply **both migrations in filename order**. No remote migration is run by the application.
 
 ## Architecture and data boundaries
 
@@ -74,7 +71,7 @@ React / Vite → same-origin /api → owner authentication → Hunter Discover
 - `src/`: interface, responsive styling, and same-origin requests. No provider credentials or database client.
 - `server/app.ts`: API routes, owner authorization seam, mutation validation, request limits, security headers, and redacted errors.
 - `server/index.ts`: server configuration, Supabase Auth, dependency wiring, and production static serving.
-- `server/hunter.ts`, `companies.ts`: bounded provider adapter, response validation, normalization, qualification, scoring, and fictional fixtures.
+- `server/hunter.ts`, `companies.ts`: bounded provider adapter, response validation, normalization, unverified qualification state, and fictional fixtures.
 - `server/store.ts`: shared storage interface with isolated in-memory demo and Supabase implementations.
 - `shared/`: public data contracts only.
 - `supabase/migrations/`: database constraints, uniqueness, timestamps, and row-level security.

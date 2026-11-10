@@ -16,7 +16,7 @@ ChurnAutopsy Growth Agent is a private, single-owner research application. This 
 - Keep all live company data behind owner authentication. Never weaken RLS or bypass owner checks to fix a test.
 - Use a separate Supabase project. Do not automatically apply remote migrations or contact real prospects.
 - Demo records must be explicitly fictional and use `.example` domains. Do not fetch favicons or remote assets from company sites.
-- Fit scores are explained heuristics. Saved means shortlisted, not legally eligible or approved for sending.
+- Discover returns identity only: preserve unknown attributes and fit score as null. Never infer employee counts from email counts or treat search filters as verified evidence. Demo scores are illustrative. Saved means shortlisted, not legally eligible or approved for sending.
 - Phase 1 has no email sending. Future send paths must fail closed until eligibility, suppression, approval, and opt-out gates are implemented.
 - Preserve review decisions on rediscovery and canonical-domain deduplication at both the adapter and database boundaries.
 - Keep provider errors redacted. Do not print request URLs containing Hunter credentials.

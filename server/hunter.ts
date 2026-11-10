@@ -1,6 +1,6 @@
 import { HunterResponse, mapHunter } from "./companies.js";
 export async function discoverHunter(apiKey: string) {
-  // Fixed ICP and bounded results prevent user-controlled queries and unbounded credit spend.
+  // Fixed ICP and bounded results prevent user-controlled queries and unbounded requests.
   const response = await fetch(
     `https://api.hunter.io/v2/discover?api_key=${encodeURIComponent(apiKey)}`,
     {
@@ -10,7 +10,7 @@ export async function discoverHunter(apiKey: string) {
       body: JSON.stringify({
         headquarters_location: { include: [{ country: "US" }] },
         headcount: ["1-10", "11-50"],
-        keywords: { include: ["SaaS", "B2B"], match: "all" },
+        industry: { include: ["Software Development"] },
         limit: 20,
         offset: 0,
       }),
@@ -18,7 +18,7 @@ export async function discoverHunter(apiKey: string) {
   );
   if (!response.ok)
     throw new Error(
-      "Hunter discovery unavailable. Check your API key, plan, and credits.",
+      "Hunter discovery unavailable. Check your API key, plan, and request limits.",
     );
   const parsed = HunterResponse.parse(await response.json());
   return parsed.data.flatMap((row) => {

@@ -1,15 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { normalizeDomain, mapHunter } from "../server/companies";
+import {
+  normalizeDomain,
+  mapHunter,
+  HunterResponse,
+} from "../server/companies";
 import { MemoryStore } from "../server/store";
-const base = {
-  domain: "WWW.Example.com",
-  organization: "Example",
-  industry: "Software Development",
-  keywords: ["SaaS", "B2B"],
-  country: "US",
-  city: "Austin",
-  headcount: "11-50",
-};
+import minimal from "./fixtures/hunter-discover-minimal.json";
+const base = minimal.data[0];
 describe("company ingestion", () => {
   it("normalizes equivalent website identities", () => {
     expect(normalizeDomain("https://WWW.Example.COM/path")).toBe("example.com");
@@ -23,22 +20,40 @@ describe("company ingestion", () => {
   ])("rejects unsafe domain %s", (value) =>
     expect(() => normalizeDomain(value)).toThrow(),
   );
-  it("explains a complete fit without granting eligibility", () => {
-    const company = mapHunter(base)!;
-    expect(company.score).toBe(100);
-    expect(company.eligibility).toBe("not_assessed");
-    expect(company.reasons).toContain("B2B keyword match");
+  it("retains documented minimal results with unknown attributes and no invented score", () => {
+    const company = mapHunter(HunterResponse.parse(minimal).data[0]);
+    expect(company).toMatchObject({
+      domain: base.domain,
+      name: base.organization,
+      industry: null,
+      location: null,
+      headcount: null,
+      score: null,
+      eligibility: "not_assessed",
+    });
+    expect(company.reasons.join(" ")).toContain("unverified");
+    expect(company).not.toHaveProperty("emails_count");
   });
-  it("flags ambiguous small-company ranges", () => {
-    const company = mapHunter({ ...base, headcount: "1-10" })!;
-    expect(company.score).toBe(80);
-    expect(company.reasons.join(" ")).toContain("confirm at least 2");
+  it("does not score from search filters, email counts, or undocumented extra fields", () => {
+    const response = HunterResponse.parse({
+      ...minimal,
+      data: [
+        {
+          ...base,
+          country: "US",
+          headcount: "11-50",
+          industry: "Software",
+          keywords: ["SaaS", "B2B"],
+          emails_count: { total: 5000 },
+        },
+      ],
+    });
+    expect(mapHunter(response.data[0])).toEqual(mapHunter(base));
   });
-  it("excludes outside-target and missing geography/size evidence", () => {
-    expect(mapHunter({ ...base, country: "CA" })).toBeNull();
-    expect(mapHunter({ ...base, headcount: "51-200" })).toBeNull();
-    expect(mapHunter({ ...base, country: null })).toBeNull();
-    expect(mapHunter({ ...base, industry: "Retail", keywords: [] })).toBeNull();
+  it("uses canonical domain as a label when organization is missing", () => {
+    expect(
+      mapHunter({ domain: "WWW.Fictional.example", organization: null }).name,
+    ).toBe("fictional.example");
   });
   it("deduplicates repeat discovery without losing review decisions", async () => {
     const store = new MemoryStore();

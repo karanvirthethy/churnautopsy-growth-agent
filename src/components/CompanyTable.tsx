@@ -57,11 +57,11 @@ export function CompanyTable({ shown, busy, query, update }: Props) {
                 </div>
               </td>
               <td>
-                <span>{company.industry}</span>
-                <small>{company.location}</small>
+                <span>{company.industry ?? "Industry unverified"}</span>
+                <small>{company.location ?? "Location unverified"}</small>
               </td>
               <td>
-                <span>{company.headcount}</span>
+                <span>{company.headcount ?? "Unverified"}</span>
                 {company.headcount === "1-10" && (
                   <small className="amber">Verify 2+ employees</small>
                 )}
@@ -70,10 +70,10 @@ export function CompanyTable({ shown, busy, query, update }: Props) {
                 <details>
                   <summary>
                     <span
-                      className={`score ${company.score >= 90 ? "high" : ""}`}
+                      className={`score ${company.score !== null && company.score >= 90 ? "high" : ""}`}
                     >
-                      {company.score}
-                      <small>/100</small>
+                      {company.score ?? "Unscored"}
+                      {company.score !== null && <small>/100</small>}
                     </span>
                   </summary>
                   <ul>

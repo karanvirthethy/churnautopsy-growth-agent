@@ -54,8 +54,10 @@ export function SettingsPage({ workspace }: { workspace?: Workspace }) {
         </dl>
         <p className="settings-note">
           Hunter’s 1–10 employee range requires manual confirmation of 2+
-          employees. SaaS and B2B signals also need human review. Fit scores are
-          transparent heuristics, not AI predictions.
+          employees. Discover returns company identity, not qualification
+          details. Live attributes remain unverified and fit remains unscored.
+          B2B and SaaS business models need manual review. No enrichment is
+          requested.
         </p>
       </section>
       <section className="settings-panel setup-note">

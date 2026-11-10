@@ -16,44 +16,27 @@ export function normalizeDomain(value: string): string {
 const HunterCompany = z.object({
   domain: z.string(),
   organization: z.string().nullish(),
-  industry: z.string().nullish(),
-  headcount: z.string().nullish(),
-  keywords: z.array(z.string()).nullish(),
-  country: z.string().nullish(),
-  city: z.string().nullish(),
-  state: z.string().nullish(),
+  // Discover documents identity and email counts, not company enrichment.
+  // Ignore email counts and extra fields: neither establishes ICP evidence.
 });
 export const HunterResponse = z.object({ data: z.array(HunterCompany) });
-export function mapHunter(
-  input: z.infer<typeof HunterCompany>,
-): Company | null {
-  if (!["US", "United States"].includes(input.country ?? "")) return null;
-  if (!["1-10", "11-50", "2-10"].includes(input.headcount ?? "")) return null;
-  const text =
-    `${input.industry ?? ""} ${(input.keywords ?? []).join(" ")}`.toLowerCase();
-  if (!/software|saas/.test(text)) return null;
-  const reasons = ["US headquarters", "Software industry match"];
-  let score = 60;
-  if (input.headcount !== "1-10") {
-    score += 20;
-    reasons.push("Employee range within 2–50");
-  } else reasons.push("1–10 range: confirm at least 2 employees");
-  if (/saas|software as a service/.test(text)) {
-    score += 10;
-    reasons.push("SaaS keyword match");
-  } else reasons.push("SaaS business model needs review");
-  if (/b2b|business.to.business/.test(text)) {
-    score += 10;
-    reasons.push("B2B keyword match");
-  } else reasons.push("B2B business model needs review");
+export function mapHunter(input: z.infer<typeof HunterCompany>): Company {
+  const domain = normalizeDomain(input.domain);
   return {
-    domain: normalizeDomain(input.domain),
-    name: input.organization || input.domain,
-    industry: input.industry || "Software",
-    location: [input.city, input.state, "US"].filter(Boolean).join(", "),
-    headcount: input.headcount!,
-    score,
-    reasons,
+    domain,
+    name: input.organization?.trim() || domain,
+    industry: null,
+    location: null,
+    headcount: null,
+    score: null,
+    reasons: [
+      "Unscored: Discover does not return company qualification evidence",
+      "Industry, location, and employee count are unverified",
+      "B2B and SaaS business models require manual review",
+      "Search filters are targeting criteria, not verified company attributes",
+      "Confirm 2–50 employees; the search includes the 1–10 bucket",
+      "No enrichment requested; legal eligibility remains not assessed",
+    ],
     status: "new",
     source: "hunter",
     eligibility: "not_assessed",

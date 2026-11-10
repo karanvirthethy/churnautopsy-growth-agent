@@ -49,3 +49,43 @@ test("owner can review demo leads and navigate all five pages", async ({
     ),
   ).toBe(true);
 });
+
+test("minimal Discover companies show unverified attributes and remain reviewable", async ({
+  page,
+}) => {
+  // Synthetic documented response shape; no provider calls or real prospects.
+  const { mapHunter, HunterResponse } = await import("../server/companies");
+  const { default: fixture } = await import(
+    "../tests/fixtures/hunter-discover-minimal.json",
+    { with: { type: "json" } }
+  );
+  const company = mapHunter(HunterResponse.parse(fixture).data[0]);
+  await page.route("**/api/companies", (route) =>
+    route.fulfill({ json: { mode: "live", companies: [company] } }),
+  );
+  await page.route("**/api/companies/metricgrove.example", async (route) => {
+    expect(route.request().postDataJSON()).toEqual({ status: "saved" });
+    await route.fulfill({ json: { ok: true } });
+  });
+  await page.goto("/");
+  await expect(
+    page.getByText("Industry unverified", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Location unverified", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "Unverified", exact: true }),
+  ).toBeVisible();
+  await page.getByText("Unscored", { exact: true }).click();
+  await expect(
+    page.getByText(
+      "Search filters are targeting criteria, not verified company attributes",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Save Metric Grove", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText("Metric Grove saved");
+});

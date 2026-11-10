@@ -114,7 +114,7 @@ export default function App() {
   const shown = companies.filter(
     (c) =>
       (filter === "all" || c.status === filter) &&
-      `${c.name} ${c.domain} ${c.industry}`
+      `${c.name} ${c.domain} ${c.industry ?? ""}`
         .toLowerCase()
         .includes(query.toLowerCase()),
   );

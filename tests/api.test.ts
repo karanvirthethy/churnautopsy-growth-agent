@@ -1,3 +1,4 @@
+import minimal from "./fixtures/hunter-discover-minimal.json";
 import { describe, it, expect, vi } from "vitest";
 import request from "supertest";
 import { createApp } from "../server/app";
@@ -113,7 +114,7 @@ describe("private API", () => {
     expect(res.status).toBe(502);
     expect(res.text).not.toContain("do-not-leak");
   });
-  it("limits repeated credit-spending requests", async () => {
+  it("limits repeated discovery requests", async () => {
     const app = createApp({
       mode: "demo",
       store: new MemoryStore(),
@@ -130,27 +131,20 @@ describe("private API", () => {
 });
 describe("Hunter adapter", () => {
   it("uses bounded US small-business discovery and validates upstream results", async () => {
-    const mock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          data: [
-            {
-              domain: "example.com",
-              organization: "Example",
-              industry: "Software",
-              keywords: ["B2B", "SaaS"],
-              country: "US",
-              headcount: "11-50",
-            },
-          ],
-        }),
-      ),
-    );
+    const mock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(JSON.stringify(minimal)));
     try {
       const rows = await discoverHunter("test-key");
-      expect(rows[0].score).toBe(100);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].score).toBeNull();
+      expect(rows[0].headcount).toBeNull();
+      expect(mock).toHaveBeenCalledTimes(1);
+      expect(String(mock.mock.calls[0][0])).toContain("/v2/discover?");
       const body = JSON.parse(String(mock.mock.calls[0][1]?.body));
       expect(body.limit).toBe(20);
+      expect(body).not.toHaveProperty("keywords");
+      expect(body.industry).toEqual({ include: ["Software Development"] });
       expect(body.headquarters_location.include[0].country).toBe("US");
       expect(body.headcount).toEqual(["1-10", "11-50"]);
     } finally {
