@@ -1,3 +1,5 @@
+import { searchProfiles, type SearchProfileId } from "../shared/searches.js";
+import { ResearchService } from "./research.js";
 import type { ConnectionHealth } from "../shared/health.js";
 import { demoHealth } from "./health.js";
 import express from "express";
@@ -9,7 +11,8 @@ import type { Company } from "../shared/company.js";
 interface Options {
   mode: "demo" | "live";
   store: Store;
-  discover: () => Promise<Company[]>;
+  discover: (profile?: SearchProfileId) => Promise<Company[]>;
+  research?: ResearchService;
   authenticate?: (token: string) => Promise<boolean>;
   login?: (email: string, password: string) => Promise<string | null>;
   secureCookies?: boolean;
@@ -17,6 +20,7 @@ interface Options {
 }
 export function createApp(options: Options) {
   const app = express();
+  const research = options.research ?? new ResearchService(options.store);
   app.disable("x-powered-by");
   app.use(helmet());
   app.use(express.json({ limit: "4kb" }));
@@ -120,10 +124,52 @@ export function createApp(options: Options) {
       limit: 3,
       message: { error: "Discovery limit reached. Try again in one minute." },
     }),
-    async (_req, res) => {
-      const companies = await options.discover();
+    async (req, res) => {
+      const input = z
+        .object({ profile: z.string().optional() })
+        .strict()
+        .safeParse(req.body);
+      const profile = searchProfiles.find(
+        (p) =>
+          p.id ===
+          (input.success ? (input.data.profile ?? searchProfiles[0].id) : ""),
+      );
+      if (!input.success || !profile) {
+        res.status(400).json({ error: "Choose a supported discovery search" });
+        return;
+      }
+      const companies = await options.discover(profile.id);
       await options.store.discover(companies);
-      res.json({ mode: options.mode, companies: await options.store.list() });
+      res.json({
+        mode: options.mode,
+        companies: await options.store.list(),
+        discoveredDomains: companies.map((c) => c.domain),
+      });
+    },
+  );
+  app.post(
+    "/api/companies/:domain/research",
+    rateLimit({
+      windowMs: 15 * 60_000,
+      limit: 30,
+      message: {
+        error: "Research request limit reached. Retry in 15 minutes.",
+      },
+    }),
+    async (req, res) => {
+      const domain = String(req.params.domain);
+      if (!(await options.store.list()).some((c) => c.domain === domain)) {
+        res.status(404).json({ error: "Company not found" });
+        return;
+      }
+      try {
+        res.json({ qualification: await research.run(domain) });
+      } catch {
+        res.status(503).json({
+          error:
+            "Research is busy or could not be saved. Retry after the current company finishes; check the new migration if this persists.",
+        });
+      }
     },
   );
   app.patch("/api/companies/:domain", async (req, res) => {

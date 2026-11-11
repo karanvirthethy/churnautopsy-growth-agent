@@ -1,6 +1,6 @@
 # Hunter Discover contract
 
-Official sources checked November 10, 2026:
+Official sources checked November 11, 2026:
 
 - https://hunter.io/api-documentation/v2#discover
 - https://hunter.io/files/industries.json
@@ -11,6 +11,6 @@ The test fixture `tests/fixtures/hunter-discover-minimal.json` follows this docu
 
 The previous adapter wrongly required location/headcount/software evidence on each result and silently removed minimal records. The corrected adapter retains identities and uses null attributes and null score. The UI labels these unverified and unscored. Search criteria never grant fit points; email counts are neither stored nor used for qualification.
 
-Search targets US headquarters, 1–10/11–50 employees, and Software Development (a value confirmed in the official industry list). Removing SaaS AND B2B keyword requirements improves recall but reduces precision. B2B SaaS qualification and the 2-employee minimum require human review. The API does not identify which bucket an individual minimal result matched.
+Search targets US headquarters, 1–10/11–50 employees, and Software Development (a value confirmed in the official industry list). Phase 2B uses six narrow keyword presets with `match: any`, rather than requiring literal SaaS AND B2B. It excludes documented company types `non profit`, `educational`, `educational institution`, and `government agency`. Limit is 20 and offset is always 0; no paid pagination or paid filters (technology, funding, similar_to, year_founded) are used. Presets rotate in the browser and may overlap. B2B SaaS qualification and the 2-employee minimum require human review. The API does not identify which bucket an individual minimal result matched.
 
 No enrichment, domain-search, contact lookup, or sending call is added. Automated tests assert that a discovery invokes exactly one HTTP request to the Discover endpoint. Any future enrichment API call requires explicit owner approval, a cost assessment, and a separate evidence model.

@@ -143,7 +143,9 @@ describe("Hunter adapter", () => {
       expect(String(mock.mock.calls[0][0])).toContain("/v2/discover?");
       const body = JSON.parse(String(mock.mock.calls[0][1]?.body));
       expect(body.limit).toBe(20);
-      expect(body).not.toHaveProperty("keywords");
+      expect(body.keywords.match).toBe("any");
+      expect(body.offset).toBe(0);
+      expect(body.company_type.exclude).toContain("non profit");
       expect(body.industry).toEqual({ include: ["Software Development"] });
       expect(body.headquarters_location.include[0].country).toBe("US");
       expect(body.headcount).toEqual(["1-10", "11-50"]);
@@ -161,4 +163,84 @@ describe("Hunter adapter", () => {
       mock.mockRestore();
     }
   });
+});
+
+it("rejects unsupported/paid discovery parameters before calling Hunter", async () => {
+  const discover = vi.fn().mockResolvedValue([]);
+  const app = createApp({ mode: "demo", store: new MemoryStore(), discover });
+  expect(
+    (await request(app).post("/api/discover").send({ profile: "unknown" }))
+      .status,
+  ).toBe(400);
+  expect(
+    (
+      await request(app)
+        .post("/api/discover")
+        .send({ profile: "support", offset: 20 })
+    ).status,
+  ).toBe(400);
+  expect(discover).not.toHaveBeenCalled();
+  expect(
+    (await request(app).post("/api/discover").send({ profile: "support" }))
+      .status,
+  ).toBe(200);
+  expect(discover).toHaveBeenCalledWith("support");
+});
+
+it("keeps research behind owner authentication and requires an existing company", async () => {
+  const app = createApp({
+    mode: "live",
+    store: new MemoryStore(),
+    discover: async () => [],
+    authenticate: async (token) => token === "owner",
+  });
+  expect(
+    (await request(app).post("/api/companies/evil.example/research").send({}))
+      .status,
+  ).toBe(401);
+  expect(
+    (
+      await request(app)
+        .post("/api/companies/evil.example/research")
+        .set("Cookie", "session=owner")
+        .send({})
+    ).status,
+  ).toBe(404);
+});
+
+it("uses distinct free-plan keyword presets with deduplicated identities", async () => {
+  const mock = vi.spyOn(globalThis, "fetch").mockImplementation(
+    async () =>
+      new Response(
+        JSON.stringify({
+          data: [
+            { domain: "www.fictional.example" },
+            { domain: "fictional.example" },
+          ],
+        }),
+      ),
+  );
+  try {
+    const a = await discoverHunter("test-key", "support");
+    await discoverHunter("test-key", "revenue");
+    expect(a).toHaveLength(1);
+    const bodies = mock.mock.calls.map((call) =>
+      JSON.parse(String(call[1]?.body)),
+    );
+    expect(bodies[0].keywords.include).not.toEqual(bodies[1].keywords.include);
+    for (const body of bodies) {
+      expect(body.offset).toBe(0);
+      expect(body.limit).toBe(20);
+      for (const name of [
+        "similar_to",
+        "technology",
+        "funding",
+        "year_founded",
+        "query",
+      ])
+        expect(body).not.toHaveProperty(name);
+    }
+  } finally {
+    mock.mockRestore();
+  }
 });

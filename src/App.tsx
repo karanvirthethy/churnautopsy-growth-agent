@@ -1,6 +1,12 @@
+import { searchProfiles } from "../shared/searches";
+import {
+  matchesQualification,
+  type Qualification,
+  type QualificationFilter,
+} from "../shared/qualification";
 import { SettingsPage } from "./pages/SettingsPage";
 import { RoadmapPage } from "./pages/RoadmapPage";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Activity,
   LayoutDashboard,
@@ -37,6 +43,65 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [auth, setAuth] = useState(false);
   const [query, setQuery] = useState("");
+  const [qualificationFilter, setQualificationFilter] =
+    useState<QualificationFilter>("all");
+  const [profile, setProfile] = useState<string>(() => {
+    try {
+      return localStorage.getItem("discovery-profile") || searchProfiles[0].id;
+    } catch {
+      return searchProfiles[0].id;
+    }
+  });
+  const stopResearch = useRef(false);
+  const [researching, setResearching] = useState(false);
+  function chooseProfile(id: string) {
+    setProfile(id);
+    try {
+      localStorage.setItem("discovery-profile", id);
+    } catch {
+      /* browser persistence is optional */
+    }
+  }
+  async function researchRows(rows: Company[]) {
+    stopResearch.current = false;
+    setResearching(true);
+    try {
+      const batch = rows.slice(0, 20);
+      for (let index = 0; index < batch.length; index++) {
+        if (stopResearch.current) {
+          setNotice(
+            "Research paused. Completed assessments are saved; resume with Research shown.",
+          );
+          return;
+        }
+        setNotice(
+          `Researching company ${index + 1} of ${batch.length}. Public pages only; no paid enrichment.`,
+        );
+        const row = batch[index];
+        const result = await request<{ qualification: Qualification }>(
+          `/companies/${encodeURIComponent(row.domain)}/research`,
+          "POST",
+          {},
+        );
+        setWorkspace(
+          (current) =>
+            current && {
+              ...current,
+              companies: current.companies.map((c) =>
+                c.domain === row.domain
+                  ? { ...c, qualification: result.qualification }
+                  : c,
+              ),
+            },
+        );
+      }
+      setNotice(
+        `Research complete for ${batch.length} companies. Review evidence and inaccessible-page notices.`,
+      );
+    } finally {
+      setResearching(false);
+    }
+  }
   const [filter, setFilter] = useState<LeadStatus | "all">("all");
   const handleError = (err: unknown) => {
     const message =
@@ -71,10 +136,27 @@ export default function App() {
     setError("");
     setNotice("");
     try {
-      setWorkspace(await request<Workspace>("/discover", "POST", {}));
-      setNotice(
-        "Discovery complete. Existing review decisions were preserved.",
+      const selected =
+        searchProfiles.find((p) => p.id === profile) ?? searchProfiles[0];
+      const result = await request<Workspace>("/discover", "POST", {
+        profile: selected.id,
+      });
+      setWorkspace(result);
+      chooseProfile(
+        searchProfiles[
+          (searchProfiles.findIndex((p) => p.id === selected.id) + 1) %
+            searchProfiles.length
+        ].id,
       );
+      await researchRows(
+        result.companies.filter((c) =>
+          result.discoveredDomains?.includes(c.domain),
+        ),
+      );
+      if (!stopResearch.current)
+        setNotice(
+          `Discovery complete: ${selected.label}. Review decisions preserved. Next search preset selected; research may include incomplete evidence.`,
+        );
     } catch (err) {
       handleError(err);
     } finally {
@@ -114,6 +196,7 @@ export default function App() {
   const shown = companies.filter(
     (c) =>
       (filter === "all" || c.status === filter) &&
+      matchesQualification(c, qualificationFilter) &&
       `${c.name} ${c.domain} ${c.industry ?? ""}`
         .toLowerCase()
         .includes(query.toLowerCase()),
@@ -202,7 +285,7 @@ export default function App() {
           <div className="private-note">
             <ShieldCheck size={18} />
             <span>
-              Private workspace<small>Single owner · Phase 1</small>
+              Private workspace<small>Single owner · Phase 2B</small>
             </span>
           </div>
           <div className="profile">
@@ -260,7 +343,7 @@ export default function App() {
                   : page === "Leads"
                     ? "Review the evidence. Save the companies that belong in your pipeline."
                     : page === "Settings"
-                      ? "Connection status, targeting, and the boundaries of Phase 1."
+                      ? "Connection status, targeting, and the boundaries of Phase 2B."
                       : "The foundation is here. Sending and reply handling are not enabled."}
               </p>
             </div>
@@ -329,7 +412,7 @@ export default function App() {
                   <span>2–50 employees</span>
                   <span>United States</span>
                 </div>
-                <span className="fixed-target">Phase 1 target</span>
+                <span className="fixed-target">Phase 2B target</span>
               </section>
             </>
           )}
@@ -347,6 +430,76 @@ export default function App() {
                   </p>
                 </div>
               </div>
+              <div className="research-toolbar">
+                <label>
+                  Next discovery search
+                  <select
+                    aria-label="Discovery search"
+                    value={profile}
+                    disabled={busy}
+                    onChange={(e) => chooseProfile(e.target.value)}
+                  >
+                    {searchProfiles.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  disabled={busy || !companies.length}
+                  onClick={async () => {
+                    setBusy(true);
+                    setError("");
+                    try {
+                      await researchRows(shown);
+                    } catch (err) {
+                      handleError(err);
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  Research shown (up to 20)
+                </button>
+                {researching && (
+                  <button
+                    onClick={() => {
+                      stopResearch.current = true;
+                    }}
+                  >
+                    Stop after current company
+                  </button>
+                )}
+              </div>
+              <div
+                className="tabs qualification-tabs"
+                aria-label="Qualification filters"
+              >
+                {(
+                  [
+                    ["all", "All fits"],
+                    ["qualified", "Qualified"],
+                    ["potential", "Potential"],
+                    ["rejected", "Rejected"],
+                    ["review", "Needs Review"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    aria-pressed={qualificationFilter === value}
+                    onClick={() => setQualificationFilter(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="qualification-help">
+                Qualification and your review decisions are separate. Rejected
+                fits include unsuitable assessments and manual rejections.
+                Discovery uses different first-page searches, never paid
+                pagination.
+              </p>
               <div className="toolbar">
                 <div className="tabs" aria-label="Filter leads">
                   {(["all", "new", "saved", "rejected"] as const).map(
@@ -360,7 +513,9 @@ export default function App() {
                           ? "All companies"
                           : status === "new"
                             ? "To review"
-                            : status[0].toUpperCase() + status.slice(1)}
+                            : status === "rejected"
+                              ? "Manually rejected"
+                              : status[0].toUpperCase() + status.slice(1)}
                       </button>
                     ),
                   )}
@@ -417,7 +572,7 @@ export default function App() {
           {page === "Settings" && <SettingsPage workspace={workspace} />}
           <footer>
             ChurnAutopsy <span>Growth starts with understanding.</span>
-            <span>Phase 1 · Discovery & research</span>
+            <span>Phase 2B · Discovery & research</span>
           </footer>
         </main>
       </div>

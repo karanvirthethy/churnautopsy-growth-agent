@@ -1,8 +1,13 @@
+import type { Qualification } from "../shared/qualification.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Company, LeadStatus } from "../shared/company.js";
 export interface Store {
   list(): Promise<Company[]>;
   discover(companies: Company[]): Promise<void>;
+  setQualification(
+    domain: string,
+    qualification: Qualification,
+  ): Promise<boolean>;
   setStatus(domain: string, status: LeadStatus): Promise<boolean>;
 }
 export class MemoryStore implements Store {
@@ -13,6 +18,12 @@ export class MemoryStore implements Store {
   async discover(companies: Company[]) {
     for (const row of companies)
       if (!this.rows.has(row.domain)) this.rows.set(row.domain, { ...row });
+  }
+  async setQualification(domain: string, qualification: Qualification) {
+    const row = this.rows.get(domain);
+    if (!row) return false;
+    row.qualification = qualification;
+    return true;
   }
   async setStatus(domain: string, status: LeadStatus) {
     const row = this.rows.get(domain);
@@ -27,7 +38,7 @@ export class SupabaseStore implements Store {
     const { data, error } = await this.db
       .from("companies")
       .select(
-        "domain,name,industry,location,headcount,score,reasons,status,source,eligibility",
+        "domain,name,industry,location,headcount,score,reasons,status,source,eligibility,qualification",
       )
       .order("created_at", { ascending: false });
     if (error) throw new Error("Database read failed");
@@ -39,6 +50,15 @@ export class SupabaseStore implements Store {
       .from("companies")
       .upsert(companies, { onConflict: "domain", ignoreDuplicates: true });
     if (error) throw new Error("Database write failed");
+  }
+  async setQualification(domain: string, qualification: Qualification) {
+    const { data, error } = await this.db
+      .from("companies")
+      .update({ qualification })
+      .eq("domain", domain)
+      .select("domain");
+    if (error) throw new Error("Qualification persistence failed");
+    return Boolean(data?.length);
   }
   async setStatus(domain: string, status: LeadStatus) {
     const { data, error } = await this.db
