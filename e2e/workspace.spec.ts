@@ -136,3 +136,104 @@ test("connection checks show independent service failures and recover on retry",
   await check.click();
   await expect(status).toContainText("Hunter — healthy");
 });
+
+test("qualification filters show evidence and preserve manual rejection across reload", async ({
+  page,
+}) => {
+  const { mapHunter } = await import("../server/companies");
+  const { qualify } = await import("../server/qualify");
+  const confirmed = qualify([
+    {
+      url: "https://qualified.example/",
+      status: "ok",
+      text: "Cloud-based software for businesses.",
+    },
+    {
+      url: "https://qualified.example/pricing",
+      status: "ok",
+      text: "Monthly subscription plans billed annually.",
+    },
+  ]);
+  const rows = [
+    {
+      ...mapHunter({
+        domain: "qualified.example",
+        organization: "Qualified Fiction",
+      }),
+      qualification: confirmed,
+    },
+    {
+      ...mapHunter({
+        domain: "potential.example",
+        organization: "Potential Fiction",
+      }),
+      qualification: { ...confirmed, classification: "potential", score: 65 },
+    },
+    {
+      ...mapHunter({
+        domain: "unsuitable.example",
+        organization: "Unsuitable Fiction",
+      }),
+      qualification: { ...confirmed, classification: "unsuitable", score: 0 },
+    },
+    {
+      ...mapHunter({
+        domain: "unknown.example",
+        organization: "Unknown Fiction",
+      }),
+    },
+  ];
+  await page.route("**/api/companies", (route) =>
+    route.fulfill({ json: { mode: "live", companies: rows } }),
+  );
+  await page.route("**/api/companies/qualified.example", (route) => {
+    expect(route.request().postDataJSON()).toEqual({ status: "rejected" });
+    rows[0].status = "rejected";
+    return route.fulfill({ json: { ok: true } });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Qualified", exact: true }).click();
+  await expect(
+    page.getByText("Qualified Fiction", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Potential Fiction", { exact: true }),
+  ).toHaveCount(0);
+  await page.locator("summary").click();
+  await expect(
+    page.getByText("Monthly subscription plans billed annually.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "subscription · qualified.example" }),
+  ).toHaveAttribute("href", "https://qualified.example/pricing");
+  await page
+    .getByRole("button", { name: "Reject Qualified Fiction", exact: true })
+    .click();
+  await expect(
+    page.getByText("Qualified Fiction", { exact: true }),
+  ).toHaveCount(0);
+  await page.reload();
+  await page.getByRole("button", { name: "Rejected", exact: true }).click();
+  await expect(
+    page.getByText("Qualified Fiction", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Unsuitable Fiction", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Potential", exact: true }).click();
+  await expect(
+    page.getByText("Potential Fiction", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Needs Review", exact: true }).click();
+  await expect(
+    page.getByText("Unknown Fiction", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Unscored", { exact: true })).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});

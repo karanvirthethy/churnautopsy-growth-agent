@@ -15,7 +15,7 @@ export async function checkConnections(
       const { error } = await db
         .from("companies")
         .select(
-          "id,domain,name,industry,location,headcount,score,reasons,status,source,eligibility,created_at,updated_at",
+          "id,domain,name,industry,location,headcount,score,reasons,status,source,eligibility,created_at,updated_at,qualification",
           { head: true },
         )
         .limit(1);
@@ -29,7 +29,7 @@ export async function checkConnections(
       return {
         status: "error",
         message:
-          "Check the Supabase project URL, secret binding, network access, and both migrations.",
+          "Check the Supabase project URL, secret binding, network access, and all Growth Agent migrations.",
       };
     }
   };

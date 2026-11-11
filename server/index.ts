@@ -18,9 +18,9 @@ const app = createApp({
   mode: live ? "live" : "demo",
   store,
   secureCookies: process.env.NODE_ENV === "production",
-  discover: () =>
+  discover: (profile) =>
     config.mode === "live"
-      ? discoverHunter(config.hunterApiKey)
+      ? discoverHunter(config.hunterApiKey, profile)
       : Promise.resolve(demoCompanies),
   ...(config.mode === "live"
     ? {

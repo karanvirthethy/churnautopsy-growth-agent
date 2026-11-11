@@ -1,3 +1,4 @@
+import type { Qualification } from "./qualification";
 export type LeadStatus = "new" | "saved" | "rejected";
 export interface Company {
   domain: string;
@@ -10,8 +11,10 @@ export interface Company {
   status: LeadStatus;
   source: "demo" | "hunter";
   eligibility: "not_assessed";
+  qualification?: Qualification | null;
 }
 export interface Workspace {
   mode: "demo" | "live";
   companies: Company[];
+  discoveredDomains?: string[];
 }

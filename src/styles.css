@@ -972,3 +972,66 @@ footer span:last-child {
     min-width: 36px;
   }
 }
+
+.research-toolbar {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.research-toolbar label {
+  display: grid;
+  gap: 7px;
+  font-size: 12px;
+  color: #bbc6bf;
+}
+.research-toolbar select,
+.research-toolbar button {
+  font: inherit;
+  border: 1px solid #465548;
+  border-radius: 5px;
+  background: #222d25;
+  color: #e8ede8;
+  padding: 10px;
+  max-width: 100%;
+}
+.qualification-tabs {
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.qualification-help {
+  font-size: 11px;
+  margin-bottom: 20px;
+  max-width: 75ch;
+}
+.fit-label {
+  display: block;
+  font-size: 11px;
+  max-width: 150px;
+  margin-bottom: 8px;
+  color: #c5d7c8;
+}
+.evidence {
+  max-width: 340px;
+  min-width: 180px;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+.evidence blockquote {
+  margin: 12px 0;
+  padding-top: 10px;
+  border-top: 1px solid #364239;
+}
+.evidence a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: #b8e899;
+}
+.evidence p {
+  font-size: 11px;
+}
+select:focus-visible {
+  outline: 2px solid #b8e899;
+  outline-offset: 3px;
+}

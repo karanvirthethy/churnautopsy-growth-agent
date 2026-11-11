@@ -1,4 +1,6 @@
-# Phase 2A: secure live setup
+# Secure live setup
+
+Phase 2B retains these same five configuration entries. Before using its code against the existing database, follow the [Phase 2B upgrade guide](phase-2b.md) to apply only the new qualification migration. Website research also needs direct public DNS/HTTPS access; Hunter/Supabase secret bindings alone do not enable it.
 
 Use only the existing **ChurnAutopsy Growth Agent** Supabase project. Its two migrations have already been applied according to the owner. Do not rerun them or connect the original ChurnAutopsy production project. No new migration is required by Phase 2A.
 
@@ -30,7 +32,7 @@ Owner verification runs before all live company operations and connection checks
 
 ## Test live discovery
 
-1. Check out the Phase 2A branch (or merge the reviewed PR when you choose), configure the five entries above, and restart with `npm run dev`. For production, use `npm run build` followed by `NODE_ENV=production npm start` behind same-origin HTTPS.
+1. Check out the reviewed feature branch (or main after merging), configure the five entries above, and restart with `npm run dev`. For production, use `npm run build` followed by `NODE_ENV=production npm start` behind same-origin HTTPS.
 2. Sign in using the configured owner account. An owner mismatch, expired token, or failed identity verification denies access.
 3. Open **Settings → Check connections**. Both services should report **healthy**. The check is owner-only and limited to three checks per minute. Demo mode reports **demo** and never calls providers.
 4. Open **Leads → Find leads**. Hunter requests the first 20 companies targeting US headquarters, small-company buckets, and Software Development. A valid empty result is possible. There is no enrichment, contact lookup, or email sending.

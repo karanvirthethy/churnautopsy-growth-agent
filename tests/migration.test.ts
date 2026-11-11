@@ -144,3 +144,60 @@ it("existing migrations allow the secret-key service_role to store unknowns and 
     await db.close();
   }
 }, 15000);
+
+it("adds qualification without changing existing rows or human decisions", async () => {
+  const db = new PGlite();
+  try {
+    await db.exec(
+      "create role anon; create role authenticated; create role service_role bypassrls;",
+    );
+    for (const file of [
+      "202611100001_companies.sql",
+      "202611100002_unverified_discovery.sql",
+    ])
+      await db.exec(await readFile(`supabase/migrations/${file}`, "utf8"));
+    await db.exec(
+      "insert into companies (domain,name,source,status) values ('existing.example','Existing','hunter','saved')",
+    );
+    await db.exec(
+      await readFile(
+        "supabase/migrations/202611110001_company_qualification.sql",
+        "utf8",
+      ),
+    );
+    expect(
+      (await db.query("select status,qualification from companies")).rows,
+    ).toEqual([{ status: "saved", qualification: null }]);
+    await db.exec("set role service_role");
+    const assessment = {
+      version: "rules-v1",
+      classification: "insufficient",
+      score: null,
+      reasons: ["No evidence"],
+      flags: [],
+      evidence: [],
+      sources: [],
+      checkedAt: new Date().toISOString(),
+    };
+    await db.query("update companies set qualification=$1::jsonb", [
+      JSON.stringify(assessment),
+    ]);
+    expect(
+      (await db.query("select status,qualification from companies")).rows,
+    ).toEqual([{ status: "saved", qualification: assessment }]);
+    await expect(
+      db.query("update companies set qualification=$1::jsonb", [
+        JSON.stringify({ ...assessment, score: 150 }),
+      ]),
+    ).rejects.toThrow(/check constraint/);
+    await expect(
+      db.exec("update companies set qualification='{}'::jsonb"),
+    ).rejects.toThrow(/check constraint/);
+    await db.exec("reset role; set role authenticated");
+    await expect(
+      db.query("select qualification from companies"),
+    ).rejects.toThrow(/permission denied/);
+  } finally {
+    await db.close();
+  }
+}, 15000);
