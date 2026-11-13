@@ -107,3 +107,12 @@ describe("safe public website access", () => {
     }
   });
 });
+
+it("retains footer no-solicitation instructions as blocking evidence", () => {
+  const page = extractPage(
+    "<p>Cloud-based software for businesses.</p><footer>No unsolicited commercial emails. Do not email us for sales.</footer>",
+    new URL("https://fictional.example/"),
+    "fictional.example",
+  );
+  expect(page.text).toContain("Do not email us for sales");
+});

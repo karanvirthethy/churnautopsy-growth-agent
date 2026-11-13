@@ -5,6 +5,8 @@ import type {
 } from "../shared/qualification.js";
 // Deliberately conservative, explainable heuristics. Text is evidence, never instructions.
 const signals = {
+  no_solicitation:
+    /\b(?:no (?:unsolicited|marketing|sales|commercial) (?:emails?|messages?|solicitation)|do not (?:contact|email|solicit)|unsolicited (?:emails?|sales|marketing).{0,40}(?:prohibited|not welcome|not permitted))\b/i,
   business:
     /\b(?:for (?:businesses|companies|organizations|teams)|business customers|business insights|business-to-business|B2B|your (?:business|company|team))\b/i,
   product:
@@ -71,9 +73,13 @@ export function qualify(
   const observed = Object.fromEntries(
     Object.keys(signals).map((key) => [key, hit(key as keyof typeof signals)]),
   ) as Record<keyof typeof signals, boolean>;
-  const flags = ["nonprofit", "agency", "consumer", "open_source"].filter(
-    (key) => observed[key as keyof typeof signals],
-  );
+  const flags = [
+    "nonprofit",
+    "agency",
+    "consumer",
+    "open_source",
+    "no_solicitation",
+  ].filter((key) => observed[key as keyof typeof signals]);
   const reasons: string[] = [];
   const productFit =
     observed.business &&

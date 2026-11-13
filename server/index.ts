@@ -1,3 +1,4 @@
+import { buildAutomation } from "./automation/runtime.js";
 import "dotenv/config";
 import { readConfig } from "./config.js";
 import { createServerSupabase, createOwnerAuth } from "./supabase.js";
@@ -15,6 +16,7 @@ const db = config.mode === "live" ? createServerSupabase(config) : null;
 const store = db ? new SupabaseStore(db) : new MemoryStore();
 if (!live) await store.discover(demoCompanies);
 const app = createApp({
+  automation: buildAutomation(config, db, store),
   mode: live ? "live" : "demo",
   store,
   secureCookies: process.env.NODE_ENV === "production",
@@ -33,6 +35,8 @@ app.use(express.static(path.resolve("dist")));
 app.get("/{*path}", (_req, res) =>
   res.sendFile(path.resolve("dist/index.html")),
 );
-app.listen(Number(process.env.PORT ?? 3001), "127.0.0.1", () =>
-  console.log(`Growth workspace API listening (${mode} mode)`),
+app.listen(
+  Number(process.env.PORT ?? 3001),
+  process.env.HOST === "0.0.0.0" ? "0.0.0.0" : "127.0.0.1",
+  () => console.log(`Growth workspace API listening (${mode} mode)`),
 );

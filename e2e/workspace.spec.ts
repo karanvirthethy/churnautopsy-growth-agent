@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 test("owner can review demo leads and navigate all five pages", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#companies");
   await expect(
     page.getByText("You’re exploring fictional companies.", { exact: false }),
   ).toBeVisible();
@@ -22,8 +22,13 @@ test("owner can review demo leads and navigate all five pages", async ({
   await expect(page.getByText("Metric Grove", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Find leads", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Discovery complete");
-  await page.getByRole("link", { name: "Leads", exact: false }).first().click();
-  await expect(page.getByRole("heading", { name: "Your leads" })).toBeVisible();
+  await page
+    .getByRole("link", { name: "Companies", exact: true })
+    .first()
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Company discovery" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "All companies" }).click();
   await page
     .getByRole("textbox", { name: "Search companies" })
@@ -33,11 +38,11 @@ test("owner can review demo leads and navigate all five pages", async ({
   ).toBeVisible();
   await page.getByRole("link", { name: "Campaigns", exact: true }).click();
   await expect(
-    page.getByText("Sending disabled", { exact: true }),
+    page.getByRole("heading", { name: "One policy. Bounded autonomy." }),
   ).toBeVisible();
   await page.getByRole("link", { name: "Inbox", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "A quiet inbox, by design." }),
+    page.getByRole("heading", { name: "Replies change the next step." }),
   ).toBeVisible();
   await page.getByRole("link", { name: "Settings", exact: true }).click();
   await expect(
@@ -76,7 +81,7 @@ test("minimal Discover companies show unverified attributes and remain reviewabl
     expect(route.request().postDataJSON()).toEqual({ status: "saved" });
     await route.fulfill({ json: { ok: true } });
   });
-  await page.goto("/");
+  await page.goto("/#companies");
   await expect(
     page.getByText("Industry unverified", { exact: true }),
   ).toBeVisible();
@@ -191,7 +196,7 @@ test("qualification filters show evidence and preserve manual rejection across r
     rows[0].status = "rejected";
     return route.fulfill({ json: { ok: true } });
   });
-  await page.goto("/");
+  await page.goto("/#companies");
   await page.getByRole("button", { name: "Qualified", exact: true }).click();
   await expect(
     page.getByText("Qualified Fiction", { exact: true }),

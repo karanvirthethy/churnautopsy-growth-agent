@@ -101,6 +101,17 @@ export function CompanyTable({ shown, busy, query, update }: Props) {
                           ).toLocaleDateString()}{" "}
                           · rules-v1
                         </small>
+                        {qualification.modelAssessment && (
+                          <p>
+                            Local AI:{" "}
+                            {qualification.modelAssessment.classification} ·
+                            subjective confidence{" "}
+                            {Math.round(
+                              qualification.modelAssessment.confidence * 100,
+                            )}
+                            %. Evidence rules still apply.
+                          </p>
+                        )}
                         {qualification.flags.length > 0 && (
                           <p>Flags: {qualification.flags.join(", ")}</p>
                         )}

@@ -5,7 +5,10 @@ import {
   type QualificationFilter,
 } from "../shared/qualification";
 import { SettingsPage } from "./pages/SettingsPage";
-import { RoadmapPage } from "./pages/RoadmapPage";
+import {
+  AutomationPage,
+  type AutomationPageName,
+} from "./pages/AutomationPage";
 import { useEffect, useState, useRef } from "react";
 import {
   Activity,
@@ -21,21 +24,30 @@ import {
 } from "lucide-react";
 import type { Company, LeadStatus, Workspace } from "../shared/company";
 const navigation = [
-  ["Dashboard", LayoutDashboard],
-  ["Leads", Building2],
+  ["Overview", LayoutDashboard],
+  ["Companies", Building2],
+  ["Qualified Leads", ShieldCheck],
+  ["Contacts", Building2],
   ["Campaigns", Send],
+  ["Email Sequences", Send],
   ["Inbox", Inbox],
+  ["Opportunities", Activity],
+  ["Automation Settings", Settings],
+  ["Usage and Costs", Activity],
   ["Settings", Settings],
 ] as const;
+const slug = (name: string) => name.toLowerCase().replaceAll(" ", "-");
+const route = () =>
+  ({ dashboard: "overview", leads: "companies" })[location.hash.slice(1)] ??
+  location.hash.slice(1);
+
 type Page = (typeof navigation)[number][0];
 import { request } from "./api";
 import { CompanyTable } from "./components/CompanyTable";
 export default function App() {
   const [page, setPage] = useState<Page>(
     () =>
-      navigation.find(
-        ([name]) => name.toLowerCase() === location.hash.slice(1),
-      )?.[0] ?? "Dashboard",
+      navigation.find(([name]) => slug(name) === route())?.[0] ?? "Overview",
   );
   const [workspace, setWorkspace] = useState<Workspace>();
   const [error, setError] = useState("");
@@ -124,9 +136,7 @@ export default function App() {
     void load();
     const handler = () =>
       setPage(
-        navigation.find(
-          ([name]) => name.toLowerCase() === location.hash.slice(1),
-        )?.[0] ?? "Dashboard",
+        navigation.find(([name]) => slug(name) === route())?.[0] ?? "Overview",
       );
     window.addEventListener("hashchange", handler);
     return () => window.removeEventListener("hashchange", handler);
@@ -195,6 +205,7 @@ export default function App() {
   const pending = companies.filter((c) => c.status === "new");
   const shown = companies.filter(
     (c) =>
+      (page !== "Qualified Leads" || matchesQualification(c, "qualified")) &&
       (filter === "all" || c.status === filter) &&
       matchesQualification(c, qualificationFilter) &&
       `${c.name} ${c.domain} ${c.industry ?? ""}`
@@ -257,7 +268,7 @@ export default function App() {
   return (
     <div className="shell">
       <aside className="sidebar">
-        <a href="#dashboard" className="brand">
+        <a href="#overview" className="brand">
           <Activity size={26} />
           <span>
             ChurnAutopsy<small>Growth workspace</small>
@@ -266,26 +277,28 @@ export default function App() {
         <nav aria-label="Main navigation">
           {navigation.map(([name, Icon]) => (
             <a
-              href={`#${name.toLowerCase()}`}
+              href={`#${slug(name)}`}
               key={name}
               aria-current={page === name ? "page" : undefined}
             >
               <Icon size={19} />
               {name}
-              {name === "Leads" && (
-                <span className="nav-count">{companies.length}</span>
+              {name === "Companies" && (
+                <span className="nav-count" aria-hidden="true">
+                  {companies.length}
+                </span>
               )}
             </a>
           ))}
         </nav>
         <p className="scroll-hint nav-hint">
-          Swipe navigation to see all five pages.
+          Swipe navigation to see all workspace pages.
         </p>
         <div className="sidebar-bottom">
           <div className="private-note">
             <ShieldCheck size={18} />
             <span>
-              Private workspace<small>Single owner · Phase 2B</small>
+              Private workspace<small>Single owner · Private automation</small>
             </span>
           </div>
           <div className="profile">
@@ -302,6 +315,21 @@ export default function App() {
             Workspace <span className="slash">/</span> <strong>{page}</strong>
           </span>
           <div className="topbar-right">
+            <button
+              className="emergency-control"
+              onClick={async () => {
+                try {
+                  await request("/automation/pause", "POST", {});
+                  setNotice(
+                    "Emergency pause applied. Sending and new automation work stopped.",
+                  );
+                } catch (err) {
+                  handleError(err);
+                }
+              }}
+            >
+              Pause all
+            </button>
             <span className="status-dot" />
             {workspace?.mode === "live" ? "Live workspace" : "Demo workspace"}
             {workspace?.mode === "live" && (
@@ -327,27 +355,29 @@ export default function App() {
           <div className="page-heading">
             <div>
               <h1>
-                {page === "Dashboard"
+                {page === "Companies"
                   ? "Find your next great-fit customer."
-                  : page === "Leads"
+                  : page === "Qualified Leads"
                     ? "A better pipeline starts here."
                     : page === "Campaigns"
-                      ? "Thoughtful outreach starts with fit."
+                      ? "Your campaign policy."
                       : page === "Inbox"
                         ? "Every conversation, in context."
-                        : "Your workspace, under control."}
+                        : page === "Overview"
+                          ? "Your growth operation."
+                          : page}
               </h1>
               <p>
-                {page === "Dashboard"
+                {page === "Companies"
                   ? "Discover promising SaaS companies. Build a pipeline worth pursuing."
-                  : page === "Leads"
+                  : page === "Qualified Leads"
                     ? "Review the evidence. Save the companies that belong in your pipeline."
                     : page === "Settings"
-                      ? "Connection status, targeting, and the boundaries of Phase 2B."
-                      : "The foundation is here. Sending and reply handling are not enabled."}
+                      ? "Connection status and secure configuration."
+                      : "Evidence-led outreach, within your approved limits."}
               </p>
             </div>
-            {["Dashboard", "Leads"].includes(page) && (
+            {["Companies", "Qualified Leads"].includes(page) && (
               <button
                 className="primary"
                 disabled={busy || !workspace}
@@ -379,7 +409,7 @@ export default function App() {
             {notice}
           </div>
           {!workspace && !error && <p role="status">Loading your workspace…</p>}
-          {page === "Dashboard" && (
+          {page === "Companies" && (
             <>
               <section className="overview" aria-label="Pipeline overview">
                 <div>
@@ -412,16 +442,16 @@ export default function App() {
                   <span>2–50 employees</span>
                   <span>United States</span>
                 </div>
-                <span className="fixed-target">Phase 2B target</span>
+                <span className="fixed-target">Discovery target</span>
               </section>
             </>
           )}
-          {["Dashboard", "Leads"].includes(page) && (
+          {["Companies", "Qualified Leads"].includes(page) && (
             <section className="lead-section">
               <div className="section-heading">
                 <div>
                   <h2>
-                    {page === "Dashboard" ? "Company discovery" : "Your leads"}{" "}
+                    {page === "Companies" ? "Company discovery" : "Your leads"}{" "}
                     <span className="count">{shown.length}</span>
                   </h2>
                   <p>
@@ -550,29 +580,29 @@ export default function App() {
               </div>
             </section>
           )}
-          {page === "Dashboard" && (
+          {page === "Companies" && (
             <section className="next-step">
               <ShieldCheck size={22} />
               <div>
                 <h3>Research first. Outreach when you’re ready.</h3>
                 <p>
-                  Saved leads are a research shortlist. Legal eligibility, email
-                  delivery, follow-ups, and replies are reserved for future
-                  phases.
+                  Saved leads are a research shortlist. Outreach also requires
+                  verified contacts, documented consent and an approved campaign
+                  policy.
                 </p>
               </div>
               <a href="#campaigns">
-                What’s next <ArrowRight size={16} />
+                Campaign policy <ArrowRight size={16} />
               </a>
             </section>
           )}
-          {(page === "Campaigns" || page === "Inbox") && (
-            <RoadmapPage page={page} savedCount={saved.length} />
+          {!["Companies", "Qualified Leads", "Settings"].includes(page) && (
+            <AutomationPage key={page} page={page as AutomationPageName} />
           )}
           {page === "Settings" && <SettingsPage workspace={workspace} />}
           <footer>
             ChurnAutopsy <span>Growth starts with understanding.</span>
-            <span>Phase 2B · Discovery & research</span>
+            <span>Private growth automation</span>
           </footer>
         </main>
       </div>

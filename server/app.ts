@@ -1,3 +1,7 @@
+import { WorkflowError } from "./automation/errors.js";
+import { automationRouter, publicUnsubscribe } from "./automation/routes.js";
+import type { GrowthEngine } from "./automation/engine.js";
+import type { GmailMailbox } from "./automation/providers.js";
 import { searchProfiles, type SearchProfileId } from "../shared/searches.js";
 import { ResearchService } from "./research.js";
 import type { ConnectionHealth } from "../shared/health.js";
@@ -9,6 +13,11 @@ import { z } from "zod";
 import type { Store } from "./store.js";
 import type { Company } from "../shared/company.js";
 interface Options {
+  automation?: {
+    engine: GrowthEngine;
+    gmail?: GmailMailbox;
+    testRecipient?: string;
+  };
   mode: "demo" | "live";
   store: Store;
   discover: (profile?: SearchProfileId) => Promise<Company[]>;
@@ -23,6 +32,8 @@ export function createApp(options: Options) {
   const research = options.research ?? new ResearchService(options.store);
   app.disable("x-powered-by");
   app.use(helmet());
+  if (options.automation)
+    app.use("/u", publicUnsubscribe(options.automation.engine));
   app.use(express.json({ limit: "4kb" }));
   app.use("/api", (_req, res, next) => {
     res.setHeader("Cache-Control", "no-store");
@@ -93,6 +104,15 @@ export function createApp(options: Options) {
     }
     next();
   });
+  if (options.automation)
+    app.use(
+      "/api/automation",
+      automationRouter(
+        options.automation.engine,
+        options.automation.gmail,
+        options.automation.testRecipient,
+      ),
+    );
   app.post(
     "/api/connections/health",
     rateLimit({
@@ -202,6 +222,10 @@ export function createApp(options: Options) {
       _next: express.NextFunction,
     ) => {
       // Provider errors can contain API keys or prospect payloads; never log/reflect them.
+      if (error instanceof WorkflowError) {
+        res.status(409).json({ error: error.message });
+        return;
+      }
       const malformed = error instanceof SyntaxError;
       res.status(malformed ? 400 : 502).json({
         error: malformed
