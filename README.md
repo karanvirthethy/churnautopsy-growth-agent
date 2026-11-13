@@ -2,7 +2,9 @@
 
 A private research workspace for finding and reviewing potential ChurnAutopsy customers. Phase 2B targets US B2B SaaS companies with 2–50 employees, using Hunter Discover behind an authenticated server API.
 
-**No emails are sent. No contacts are harvested. A fit score is not permission to contact a company.**
+**Real sending and chargeable contact calls are OFF by default. A fit score is never permission to contact a company.**
+
+The complete autonomous workflow is implemented in dry-run mode. See the [consolidated setup and activation guide](docs/activation-guide.md) for the new additive migration, private hosting, Gmail OAuth, consent evidence, budgets, tests and explicit activation. Start at Overview → Start dry run to exercise the fictional pipeline.
 
 ## Capabilities
 
@@ -39,7 +41,7 @@ For a preinstalled Chromium, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/c
 
 Use the existing **dedicated ChurnAutopsy Growth Agent Supabase project**. See the [Phase 2A configuration and live testing guide](docs/live-setup.md) for exact Codex variables and restricted network secret destinations. Do not apply these migrations or reuse credentials from the existing ChurnAutopsy production project.
 
-1. The owner reports the first two migrations already applied. Do not rerun them. For Phase 2B apply only `202611110001_company_qualification.sql` once, following [the upgrade guide](docs/phase-2b.md). New installations need all SQL files in `supabase/migrations/` in filename order. No command automatically links or migrates a remote project.
+1. The owner reports the first two migrations already applied. Do not rerun them. For Phase 2B apply only `202611110001_company_qualification.sql` once, following [the upgrade guide](docs/phase-2b.md). For the autonomous system also apply only `202611120001_growth_automation.sql` once as described in the activation guide. New installations need all SQL files in `supabase/migrations/` in filename order. No command automatically links or migrates a remote project.
 2. In Supabase Auth, disable public signups. Create the single owner account with a strong password and record its user UUID. The app does not offer account registration.
 3. Set the server's `DATA_MODE=live`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `OWNER_USER_ID`, and `HUNTER_API_KEY`. Store values in an ignored local `.env` or your host's secret manager. Never use a `VITE_` prefix for secrets.
 4. Restart the server and sign in with that owner account. Live mode refuses to start with missing configuration; provider failures never silently fall back to fictional data.
@@ -76,9 +78,9 @@ React / Vite → same-origin /api → owner authentication → Hunter Discover
 
 Canonical domains are unique. Discovery uses conflict-ignore inserts, so rediscovery cannot reset saved/rejected decisions. RLS is enabled with no browser access policies, and grants to anonymous/authenticated roles are revoked. Only the server's secret-key service-role client can read/write companies. The API authenticates the owner before any live read, write, or Hunter call. Provider error payloads and request URLs are not logged or returned to the browser.
 
-## Future phases
+## Autonomous workflow
 
-See [architecture and safety boundaries](docs/architecture.md). Legal eligibility, suppression lists, approved campaign drafts, delivery, follow-ups, and reply ingestion require separate models and explicit gates. Phase 1 has no send endpoints, mailbox integrations, delivery workers, or email provider dependencies.
+The [architecture](docs/architecture.md) now includes a persistent worker, consent/suppression checks, approved campaign policy, Gmail outbox, follow-ups, inbox and opportunities. All real dispatch remains gated behind server configuration and explicit owner activation. See [provider contracts](docs/automation-contracts.md).
 
 ## Validation and limitations
 

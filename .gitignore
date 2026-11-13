@@ -7,3 +7,6 @@ playwright-report/
 test-results/
 *.log
 coverage/
+
+# Local visual-review artifacts may contain workspace data.
+.impeccable/review/

@@ -12,17 +12,17 @@ Demo and live storage are distinct. The live store never seeds demo rows. `DATA_
 
 `new → saved | rejected`, with either decision reversible to `new`. The database's unique canonical domain is the idempotency boundary. Concurrent rediscovery inserts use `ON CONFLICT DO NOTHING`; they preserve decisions but intentionally do not refresh existing enrichment. A later enrichment job should update metadata separately without touching review status.
 
-The current company model stores only business-level information. It has no email address, personal contact, tracking pixel, mailbox token, or message body. `eligibility=not_assessed` is enforced by a database constraint, not merely UI copy.
+The company table still stores only business-level information. Contact, consent, messages and replies live in the private automation aggregate; mailbox secrets remain in server environment configuration. No tracking pixels exist. `eligibility=not_assessed` is enforced by a database constraint, not merely UI copy.
 
-## Future work must add explicit boundaries
+## Autonomous workflow boundaries
 
-1. **Eligibility assessment:** a separate evidence record with jurisdiction, lawful basis, source provenance, assessment date, policy version, expiration, and reviewer. Unknown and expired decisions must deny sending. Add suppression and opt-out records before any outbound feature.
-2. **Campaign drafting:** immutable draft versions, intended recipients, eligibility references, owner approval, and a preview. A saved company alone must never enter a delivery queue.
-3. **Delivery:** transactional outbox, per-recipient idempotency, retry budgets, rate limits, provider adapters, and an audited final eligibility/suppression check immediately before dispatch. No delivery adapter is instantiated in Phase 1.
-4. **Follow-ups:** explicit state machine, approved schedule, cancellation on reply/unsubscribe/bounce, and business-time rules. Avoid long-lived in-process timers.
-5. **Replies:** signed, replay-protected webhooks; deduplicated provider message IDs; thread/company association; and cancellation of pending follow-ups before classification. Treat incoming message content as untrusted data.
+`server/automation/` implements the remaining lifecycle without changing existing company decisions. The PostgreSQL `growth_runtime` singleton stores a versioned workflow aggregate. A restricted compare-and-swap RPC serializes persistent job claims, budgets, policy approvals, contacts, consent, suppressions and outbox transitions; the same transaction appends immutable `growth_audit` rows. This is deliberately a low-volume, single-owner design, not a distributed high-throughput queue. State is capped at 10 MB; expansion requires a reviewed archival/normalization migration.
 
-Add these through new migrations and service interfaces. Do not repurpose fit scores as legal assessments or infer consent from a company appearing in Hunter.
+The worker uses durable due times and a 30-minute job lease. It reserves usage before providers, retries non-delivery failures at most three times with backoff, and marks interrupted dispatch uncertain instead of retrying. The API and worker share PostgreSQL state; paused policies block claims. A final owner policy/eligibility/suppression/evidence check precedes every send. Gmail replies are synchronized before dispatch, and ingestion stops follow-ups before intent classification. A narrow unauthenticated signed unsubscribe route is the only public surface needed.
+
+Consent and qualification are separate records. Only current express consent for the specific outreach, known allowed jurisdiction, fresh valid verification, fresh confirmed website evidence and approved sender details can pass. No-solicitation signals, manual rejections and permanent suppressions deny. The existing company `eligibility=not_assessed` remains unchanged; contact-level assessments are evaluated just before planning and sending. Opportunity stages require the owner to perform and record actual audit work.
+
+See [the complete activation guide](activation-guide.md) for costs, configuration, migration, failure semantics and limitations. No real sending or chargeable API call is enabled by installing this code.
 
 ## Phase 2A connection checks
 

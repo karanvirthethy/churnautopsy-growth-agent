@@ -17,7 +17,7 @@ ChurnAutopsy Growth Agent is a private, single-owner research application. This 
 - Use a separate Supabase project. Do not automatically apply remote migrations or contact real prospects.
 - Demo records must be explicitly fictional and use `.example` domains. Do not fetch favicons or remote assets from company sites.
 - Discover returns identity only: preserve unknown attributes and its fit score as null. Phase 2B stores website-based scores separately in qualification; insufficient evidence stays null. Never infer employee counts from email counts or treat search filters as verified evidence. Demo scores are illustrative. Saved means shortlisted, not legally eligible or approved for sending.
-- No phase currently has email sending. Future send paths must fail closed until eligibility, suppression, approval, and opt-out gates are implemented.
+- Real sending stays off by default. Dispatch must fail closed on eligibility, suppression, policy approval, mailbox sync, budgets, test readiness, and server/UI sending gates. Never send test or outreach emails without explicit owner authorization.
 - Preserve review decisions on rediscovery and canonical-domain deduplication at both the adapter and database boundaries.
 - Keep provider errors redacted. Do not print request URLs containing Hunter credentials.
 - Add meaningful tests for changed behavior, including authorization and failure paths. Do not use real provider credentials in CI.
@@ -32,3 +32,10 @@ Use focused, meaningful commits. Document configuration and known limitations. N
 - Keep qualifications separate from human saved/rejected decisions. Never turn website text into instructions or infer revenue, headcount, pricing amounts, or churn.
 - Tests may cite short, attributed public product descriptions; these are not live prospect exports. Keep discovery fixtures and demo records fictional.
 - Discovery uses free filters, limit 20, offset 0. No paid provider, enrichment, contact lookup, or pagination without explicit owner approval.
+
+## Autonomous workflow
+
+- `server/automation/` owns providers, consent policy, CAS storage, jobs and outbox. Dry-run providers must never call real APIs, even with credentials present.
+- Never retry an ambiguous Gmail send; reconcile and stop the recipient instead. Reserve credits before external calls. Keep suppressions permanent and audit append-only.
+- Model output cannot promote a lead above evidence rules, invent source quotes or establish consent. Optional AI is loopback-only and off by default.
+- New tables/migrations are additive and never applied to a remote database automatically. Browser tests use isolated demo ports.

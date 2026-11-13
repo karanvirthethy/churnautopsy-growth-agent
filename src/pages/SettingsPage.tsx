@@ -91,7 +91,7 @@ export function SettingsPage({ workspace }: { workspace?: Workspace }) {
           <dt>Legal eligibility</dt>
           <dd>Not assessed</dd>
           <dt>Email sending</dt>
-          <dd>Disabled</dd>
+          <dd>Off by default; controlled in Automation Settings</dd>
         </dl>
         <p className="settings-note">
           Hunter’s 1–10 employee range requires manual confirmation of 2+
