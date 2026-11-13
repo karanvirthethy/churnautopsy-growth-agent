@@ -14,7 +14,8 @@
     "test:e2e": "playwright test",
     "check": "npm run build && npm test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "worker": "tsx server/worker.ts"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "^5.2.8",

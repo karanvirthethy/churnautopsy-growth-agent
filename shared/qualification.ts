@@ -11,6 +11,13 @@ export interface ResearchPage {
   text: string;
 }
 export interface Qualification {
+  modelAssessment?: {
+    provider: "local_model";
+    classification: Classification;
+    confidence: number;
+    uncertainties: string[];
+    evidence: { quote: string; url: string }[];
+  };
   version: "rules-v1";
   classification: Classification;
   score: number | null;

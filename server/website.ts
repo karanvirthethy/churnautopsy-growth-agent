@@ -133,6 +133,17 @@ export function extractPage(html: string, base: URL, domain: string) {
         return [];
       }
     });
+  // Restrictions often live in footers removed from positive product evidence.
+  // Keep their exact text as blocking evidence before discarding navigation chrome.
+  const restrictions = $("footer, [role='contentinfo']")
+    .toArray()
+    .map((el) => $(el).text().replace(/\s+/g, " ").trim())
+    .filter((text) =>
+      /no (?:unsolicited|marketing|sales|commercial) (?:emails?|messages?|solicitation)|do not (?:contact|email|solicit)|unsolicited (?:emails?|sales|marketing).{0,40}(?:prohibited|not welcome|not permitted)/i.test(
+        text,
+      ),
+    )
+    .map((text) => text.slice(0, 1000));
   $(
     'script,style,noscript,nav,footer,header,blockquote,aside,[hidden],[aria-hidden="true"]',
   ).remove();
@@ -147,7 +158,7 @@ export function extractPage(html: string, base: URL, domain: string) {
     .join("\n")
     .slice(0, 24000);
   return {
-    text,
+    text: [text, ...restrictions].join("\n"),
     links: [...new Set(links)]
       .sort(
         (a, b) =>
