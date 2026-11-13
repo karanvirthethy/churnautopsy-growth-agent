@@ -79,6 +79,12 @@ export function stopContact(
   suppress = false,
 ) {
   c.stopped = reason;
+  c.eligibility = {
+    ...c.eligibility,
+    allowed: false,
+    reasons: [`Contact stopped: ${reason}`],
+    checkedAt: now.toISOString(),
+  };
   if (suppress && !s.suppressions[c.email])
     s.suppressions[c.email] = { at: now.toISOString(), reason };
   for (const m of s.messages.filter(

@@ -99,6 +99,7 @@ describe("complete autonomous dry-run journey", () => {
     await engine.receive(incoming, "dry_run");
     const s = (await store.read()).value;
     expect(s.replies).toHaveLength(1);
+    expect(s.contacts[0].eligibility.allowed).toBe(false);
     expect(s.messages.filter((m) => m.status === "queued")).toHaveLength(0);
     if (text.startsWith("Yes")) expect(s.opportunities).toHaveLength(1);
     if (text.startsWith("Unsubscribe") || text.startsWith("Not"))
